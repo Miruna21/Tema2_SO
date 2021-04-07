@@ -68,9 +68,55 @@ int so_fclose(SO_FILE *stream)
 	return 0;
 }
 
+
+int syscall_write(SO_FILE *stream)
+{
+	size_t bytes_written = stream->write_offset;
+	int count = stream->crt_write_buf_size;
+
+	/* se scriu datele din buffer in fisier pana cand totul a fost scris cu succes */
+	while (bytes_written < count) {
+		int crt_bytes_written = write(stream->fd, stream->write_buffer + bytes_written, count - bytes_written);
+
+		if (crt_bytes_written <= 0) {
+			stream->found_error = 1;
+			return SO_EOF;
+		}
+
+		bytes_written += crt_bytes_written;
+		stream->write_offset = bytes_written;
+	}
+	/* se reseteaza dimensiunea buffer-ului la 0 */
+	stream->crt_write_buf_size = 0;
+	stream->write_offset = 0;
+
+	return 0;
+}
+
+
 int so_fgetc(SO_FILE *stream)
 {
-    return -1;
+	stream->last_op = 0;
+
+	if (so_feof(stream) == 1)
+		return SO_EOF;
+
+	/* daca buffer-ul intern de read este gol sau am citit tot ce se afla in buffer, se incearca umplerea buffer-ului */
+	if (stream->crt_read_buf_size == 0 || stream->read_offset == stream->crt_read_buf_size) {
+		int ret = syscall_read(stream);
+
+		if (ret == SO_EOF)
+			return SO_EOF;
+	}
+
+	/* se preia un caracter din buffer */
+	int pos = stream->read_offset;
+	int character = (int)stream->read_buffer[pos];
+
+	stream->read_offset += 1;
+	stream->cursor += 1;
+
+	return character;
 }
 
 int so_fputc(int c, SO_FILE *stream)
