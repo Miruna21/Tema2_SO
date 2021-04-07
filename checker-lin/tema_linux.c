@@ -69,6 +69,41 @@ int so_fclose(SO_FILE *stream)
 }
 
 
+int syscall_read(SO_FILE *stream)
+{
+	size_t bytes_read = 0;
+	int count = BUFFER_SIZE;
+
+	/* daca s-a ajuns la sfarsitul fisierului, nu mai apelez read */
+	if (stream->end_of_file == 1)
+		return 0;
+
+	/* se citesc mai multi bytes in avans din fisier pana se umple buffer-ul intern sau s-a ajuns la sfarsitul fisierului */
+	int crt_bytes_read = read(stream->fd, stream->read_buffer + bytes_read, count - bytes_read);
+
+	if (crt_bytes_read == 0) {
+		/* sfarsitul fisierului */
+		stream->end_of_file = 1;
+		stream->end_of_file_pos = stream->cursor + crt_bytes_read;
+		bytes_read += crt_bytes_read;
+		stream->crt_read_buf_size = bytes_read;
+		return SO_EOF;
+	}
+	if (crt_bytes_read < 0) {
+		/* eroare */
+		stream->found_error = 1;
+		return SO_EOF;
+	}
+
+	bytes_read += crt_bytes_read;
+	stream->crt_read_buf_size = bytes_read;
+
+	stream->read_offset = 0;
+
+	return 0;
+}
+
+
 int syscall_write(SO_FILE *stream)
 {
 	size_t bytes_written = stream->write_offset;
