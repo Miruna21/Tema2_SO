@@ -156,7 +156,23 @@ int so_fgetc(SO_FILE *stream)
 
 int so_fputc(int c, SO_FILE *stream)
 {
-    return -1;
+    stream->last_op = 1;
+	int ret = c;
+	int crt_pos = stream->crt_write_buf_size;
+
+	/* se scrie un caracter in buffer */
+	stream->write_buffer[crt_pos] = (unsigned char)c;
+	stream->crt_write_buf_size += 1;
+	stream->cursor += 1;
+
+	/* daca buffer-ul de write este plin, se vor scrie datele in fisier */
+	if (stream->crt_write_buf_size == BUFFER_SIZE)
+		ret = syscall_write(stream);
+
+	if (ret == 0 || ret == c)
+		return c;
+
+	return ret;
 }
 
 size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
