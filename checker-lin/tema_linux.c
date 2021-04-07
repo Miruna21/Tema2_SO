@@ -43,7 +43,29 @@ SO_FILE *so_fopen(const char *pathname, const char *mode)
 
 int so_fclose(SO_FILE *stream)
 {
-    return -1;
+	/* se goleste buffer-ul in care am scris pana in acest moment, daca avem date in acesta */
+	int ret1 = so_fflush(stream);
+
+	if (ret1 == SO_EOF) {
+		int ret2 = close(stream->fd);
+
+		free(stream);
+
+		if (ret2 < 0)
+			return SO_EOF;
+
+		return SO_EOF;
+	}
+
+	/* se inchide file descriptorul care indica spre structura de fisier deschis */
+	int ret2 = close(stream->fd);
+
+	free(stream);
+
+	if (ret2 < 0)
+		return SO_EOF;
+
+	return 0;
 }
 
 int so_fgetc(SO_FILE *stream)
