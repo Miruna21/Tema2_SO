@@ -177,7 +177,28 @@ int so_fputc(int c, SO_FILE *stream)
 
 size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 {
-    return 0;
+    unsigned char *memory_zone = (unsigned char *)ptr;
+	int nr_elements_read = 0;
+
+	/* se vor scrie la adresa de memorie mentionata byte cu byte datele intoarse de fgetc */
+	for (int i = 0; i < nmemb; i++) {
+		for (int j = 0; j < size; j++) {
+			int ret = so_fgetc(stream);
+
+			if (so_feof(stream) == 1 && nr_elements_read < nmemb)
+				return nr_elements_read;
+			else if (so_feof(stream) == 1)
+				return 0;
+
+			if (ret == SO_EOF)
+				return 0;
+
+			memory_zone[i * size + j] = (unsigned char)ret;
+		}
+		nr_elements_read++;
+	}
+
+	return nr_elements_read;
 }
 
 size_t so_fwrite(const void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
