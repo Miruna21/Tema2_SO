@@ -241,22 +241,43 @@ int so_fflush(SO_FILE *stream)
 
 int so_fseek(SO_FILE *stream, long offset, int whence)
 {
-    return -1;
+    if (stream->last_op == 0) {
+		/* operatie de citire -> read buffer invalid */
+		stream->crt_read_buf_size = 0;
+	} else if (stream->last_op == 1) {
+		/* operatie de scriere -> e nevoie de fflush */
+		int ret = so_fflush(stream);
+
+		if (ret == SO_EOF)
+			return SO_EOF;
+	}
+
+	/* se schimba pozitia cursorului */
+	off_t pos = lseek(stream->fd, offset, whence);
+
+	if (pos < 0) {
+		stream->found_error = 1;
+		return SO_EOF;
+	}
+	stream->cursor = pos;
+
+	return 0;
 }
 
 long so_ftell(SO_FILE *stream)
 {
-    return 0;
+    return stream->cursor;
 }
 
 int so_feof(SO_FILE *stream)
 {
-    return 0;
+    return (stream->end_of_file == 1);
 }
 
 int so_ferror(SO_FILE *stream)
 {
-    return 0;
+    /* intoarce 1 daca a avut loc o eroare pe parcurs in urma apelurile de sistem */
+	return stream->found_error;
 }
 
 
