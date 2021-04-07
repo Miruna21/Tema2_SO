@@ -228,7 +228,15 @@ int so_fileno(SO_FILE *stream)
 
 int so_fflush(SO_FILE *stream)
 {
-    return -1;
+    /* se scriu datele din buffer in fisier, daca e cazul */
+	if (stream->last_op == 1) {
+		int ret = syscall_write(stream);
+
+		if (ret == SO_EOF)
+			return SO_EOF;
+	}
+
+	return 0;
 }
 
 int so_fseek(SO_FILE *stream, long offset, int whence)
