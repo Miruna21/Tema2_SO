@@ -1,9 +1,7 @@
 #include "so_stdio.h"
 
 SO_FILE *so_fopen(const char *pathname, const char *mode)
-{
-    int fd = -1;
-
+{   int fd = -1;
 	/* se deschide fisierul in modul dorit cu permisiunile necesare */
 	if (strcmp(mode, "r") == 0)
 		fd = open(pathname, O_RDONLY, 0644);
@@ -155,8 +153,7 @@ int so_fgetc(SO_FILE *stream)
 }
 
 int so_fputc(int c, SO_FILE *stream)
-{
-    stream->last_op = 1;
+{   stream->last_op = 1;
 	int ret = c;
 	int crt_pos = stream->crt_write_buf_size;
 
@@ -176,8 +173,7 @@ int so_fputc(int c, SO_FILE *stream)
 }
 
 size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
-{
-    unsigned char *memory_zone = (unsigned char *)ptr;
+{   unsigned char *memory_zone = (unsigned char *)ptr;
 	int nr_elements_read = 0;
 
 	/* se vor scrie la adresa de memorie mentionata byte cu byte datele intoarse de fgetc */
@@ -202,8 +198,7 @@ size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 }
 
 size_t so_fwrite(const void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
-{
-    unsigned char *memory_zone = (unsigned char *)ptr;
+{   unsigned char *memory_zone = (unsigned char *)ptr;
 	int nr_elements_written = 0;
 
 	/* datele din zona de memorie mentionata se vor scrie in buffer-ul intern cu ajutorul functiei fputc */
@@ -223,7 +218,7 @@ size_t so_fwrite(const void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 
 int so_fileno(SO_FILE *stream)
 {
-	return stream->fd;;
+	return stream->fd;
 }
 
 int so_fflush(SO_FILE *stream)
@@ -240,8 +235,7 @@ int so_fflush(SO_FILE *stream)
 }
 
 int so_fseek(SO_FILE *stream, long offset, int whence)
-{
-    if (stream->last_op == 0) {
+{   if (stream->last_op == 0) {
 		/* operatie de citire -> read buffer invalid */
 		stream->crt_read_buf_size = 0;
 	} else if (stream->last_op == 1) {
@@ -266,12 +260,12 @@ int so_fseek(SO_FILE *stream, long offset, int whence)
 
 long so_ftell(SO_FILE *stream)
 {
-    return stream->cursor;
+return stream->cursor;
 }
 
 int so_feof(SO_FILE *stream)
 {
-    return (stream->end_of_file == 1);
+return (stream->end_of_file == 1);
 }
 
 int so_ferror(SO_FILE *stream)
@@ -282,8 +276,7 @@ int so_ferror(SO_FILE *stream)
 
 
 SO_FILE *so_popen(const char *command, const char *type)
-{
-    pid_t pid;
+{   pid_t pid;
 	int fd[2];
 	SO_FILE *so_file = malloc(sizeof(SO_FILE));
 
@@ -357,5 +350,21 @@ SO_FILE *so_popen(const char *command, const char *type)
 
 int so_pclose(SO_FILE *stream)
 {
-    return -1;
+    /* parintele ajunge aici */
+	int status;
+	int pid = stream->child_pid;
+
+	/* se elibereaza structura SO_FILE si se inchide file discriptorul parintelui ramas deschis */
+	int ret = so_fclose(stream);
+
+	if (ret < 0)
+		return SO_EOF;
+
+	/* se asteapta procesul copil */
+	int wait_ret = waitpid(pid, &status, 0);
+
+	if (wait_ret < 0)
+		return SO_EOF;
+
+	return WEXITSTATUS(status);
 }
