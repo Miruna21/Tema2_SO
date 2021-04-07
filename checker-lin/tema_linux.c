@@ -203,12 +203,27 @@ size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 
 size_t so_fwrite(const void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 {
-    return 0;
+    unsigned char *memory_zone = (unsigned char *)ptr;
+	int nr_elements_written = 0;
+
+	/* datele din zona de memorie mentionata se vor scrie in buffer-ul intern cu ajutorul functiei fputc */
+	for (int i = 0; i < nmemb; i++) {
+		for (int j = 0; j < size; j++) {
+			unsigned char byte = memory_zone[i * size + j];
+			int ret = so_fputc(byte, stream);
+
+			if (ret == SO_EOF)
+				return 0;
+		}
+		nr_elements_written++;
+	}
+
+	return nr_elements_written;
 }
 
 int so_fileno(SO_FILE *stream)
 {
-	return -1;
+	return stream->fd;;
 }
 
 int so_fflush(SO_FILE *stream)
