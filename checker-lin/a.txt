@@ -1,0 +1,1 @@
+valgrind --leak-check=full --show-reachable=yes --vex-iropt-register-updates=allregs-at-mem-access --show-leak-kinds=all --error-exitcode=100 $MEMCHECK_EXTRA --log-file=_log

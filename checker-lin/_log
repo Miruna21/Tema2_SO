@@ -1,0 +1,37 @@
+==10850== Memcheck, a memory error detector
+==10850== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==10850== Using Valgrind-3.15.0 and LibVEX; rerun with -h for copyright info
+==10850== Command: _test/bin/test_fread_huge_chunked ./_test/work/test_10 4
+==10850== Parent PID: 10846
+==10850== 
+==10850== 
+==10850== Process terminating with default action of signal 2 (SIGINT)
+==10850==    at 0x498B140: read (read.c:26)
+==10850==    by 0x10951B: hook_read (test_fread_huge_chunked.c:33)
+==10850==    by 0x484B6D1: syscall_read (in /home/miruna/Desktop/SO/Tema2/so/assignments/2-stdio/checker-lin/libso_stdio.so)
+==10850==    by 0x484B897: so_fgetc (in /home/miruna/Desktop/SO/Tema2/so/assignments/2-stdio/checker-lin/libso_stdio.so)
+==10850==    by 0x484B9F6: so_fread (in /home/miruna/Desktop/SO/Tema2/so/assignments/2-stdio/checker-lin/libso_stdio.so)
+==10850==    by 0x109785: main (test_fread_huge_chunked.c:88)
+==10850== 
+==10850== HEAP SUMMARY:
+==10850==     in use at exit: 208,236 bytes in 2 blocks
+==10850==   total heap usage: 7 allocs, 5 frees, 214,356 bytes allocated
+==10850== 
+==10850== 8,236 bytes in 1 blocks are still reachable in loss record 1 of 2
+==10850==    at 0x483B7F3: malloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+==10850==    by 0x484B54A: so_fopen (in /home/miruna/Desktop/SO/Tema2/so/assignments/2-stdio/checker-lin/libso_stdio.so)
+==10850==    by 0x10969A: main (test_fread_huge_chunked.c:72)
+==10850== 
+==10850== 200,000 bytes in 1 blocks are still reachable in loss record 2 of 2
+==10850==    at 0x483B7F3: malloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+==10850==    by 0x109562: main (test_fread_huge_chunked.c:50)
+==10850== 
+==10850== LEAK SUMMARY:
+==10850==    definitely lost: 0 bytes in 0 blocks
+==10850==    indirectly lost: 0 bytes in 0 blocks
+==10850==      possibly lost: 0 bytes in 0 blocks
+==10850==    still reachable: 208,236 bytes in 2 blocks
+==10850==         suppressed: 0 bytes in 0 blocks
+==10850== 
+==10850== For lists of detected and suppressed errors, rerun with: -s
+==10850== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
