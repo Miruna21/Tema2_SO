@@ -283,7 +283,75 @@ int so_ferror(SO_FILE *stream)
 
 SO_FILE *so_popen(const char *command, const char *type)
 {
-    return NULL;
+    pid_t pid;
+	int fd[2];
+	SO_FILE *so_file = malloc(sizeof(SO_FILE));
+
+	/* se creeaza pipe-ul necesar comunicarii dintre procesul parinte si procesul copil */
+	int ret = pipe(fd);
+
+	if (ret < 0)
+		return NULL;
+
+	/* se creeaza procesul copil */
+	pid = fork();
+	switch (pid) {
+	case -1:
+		/* eroare la crearea noului proces */
+		close(fd[0]);
+		close(fd[1]);
+		free(so_file);
+		return NULL;
+	case 0:
+		/* procesul copil */
+		if (strcmp(type, "r") == 0) {
+			/* se inchide STDIN */
+			close(fd[0]);
+			/* se redirecteaza STDOUT-ul copilului in capatul fd[1] al pipe-ului */
+			dup2(fd[1], STDOUT_FILENO);
+		} else if (strcmp(type, "w") == 0) {
+			/* se inchide STDOUT */
+			close(fd[1]);
+			/* se redirecteaza STDIN-ul copilului in capatul fd[0] al pipe-ului */
+			dup2(fd[0], STDIN_FILENO);
+		}
+
+		/* se schimba imaginea procesului copil cu a comenzii de mai jos */
+		execlp("sh", "sh", "-c", (const char *)command, NULL);
+
+		exit(EXIT_FAILURE);
+	default:
+		/* procesul parinte */
+		if (so_file == NULL)
+			return NULL;
+
+		if (strcmp(type, "r") == 0) {
+			/* se inchide STDOUT */
+			close(fd[1]);
+			/* se salveaza capatul pipe-ului cu care comunica parintele cu copilul */
+			so_file->fd = fd[0];
+		} else if (strcmp(type, "w") == 0) {
+			/* se inchide STDIN */
+			close(fd[0]);
+			/* se salveaza capatul pipe-ului cu care comunica parintele cu copilul */
+			so_file->fd = fd[1];
+		}
+
+		break;
+	}
+
+	so_file->crt_read_buf_size = 0;
+	so_file->crt_write_buf_size = 0;
+	so_file->write_offset = 0;
+	so_file->read_offset = 0;
+	so_file->found_error = 0;
+	so_file->end_of_file = 0;
+	so_file->last_op = -1;
+	so_file->cursor = 0;
+	so_file->end_of_file_pos = -2;
+	so_file->child_pid = pid;
+
+	return so_file;
 }
 
 
