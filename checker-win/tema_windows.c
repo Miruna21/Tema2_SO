@@ -296,6 +296,21 @@ size_t so_fwrite(const void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 }
 
 
+int so_fflush(SO_FILE *stream)
+{
+	int ret;
+
+	/* se scriu datele din buffer in fisier, daca e cazul */
+	if (stream->last_op == 1) {
+		ret = syscall_write(stream);
+
+		if (ret == SO_EOF)
+			return SO_EOF;
+	}
+
+	return 0;
+}
+
 HANDLE so_fileno(SO_FILE *stream)
 {
 	return stream->fd;
