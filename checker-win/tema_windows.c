@@ -478,3 +478,34 @@ SO_FILE *so_popen(const char *command, const char *type)
 
 	return so_file;
 }
+
+int so_pclose(SO_FILE *stream)
+{
+	/* parintele ajunge aici */
+	DWORD ret;
+	DWORD exit_code;
+	HANDLE hProcess = stream->hProcess;
+	HANDLE hThread = stream->hThread;
+
+	/* se elibereaza structura SO_FILE si se inchide file discriptorul parintelui ramas deschis */
+	ret = so_fclose(stream);
+
+	if (ret == SO_EOF)
+		return SO_EOF;
+
+	/* se asteapta procesul copil */
+	ret = WaitForSingleObject(hProcess, INFINITE);
+
+	if (ret == WAIT_FAILED)
+		return SO_EOF;
+
+	ret = GetExitCodeProcess(hProcess, &exit_code);
+
+	if (ret == FALSE)
+		return SO_EOF;
+
+	CloseHandle(hThread);
+	CloseHandle(hProcess);
+
+	return exit_code;
+}
