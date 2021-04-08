@@ -87,3 +87,40 @@ SO_FILE *so_fopen(const char *pathname, const char *mode)
 
 	return so_file;
 }
+
+int so_fclose(SO_FILE *stream)
+{	int ret1;
+	BOOL ret2;
+
+	/* se goleste buffer-ul in care am scris, daca avem date in acesta */
+	ret1 = so_fflush(stream);
+
+	if (ret1 == SO_EOF) {
+		ret2 = CloseHandle(stream->fd);
+
+		free(stream);
+
+		if (ret2 == FALSE)
+			return SO_EOF;
+
+		return SO_EOF;
+	}
+
+	/* se inchide file descriptorul care indica spre structura de fisier deschis */
+	ret2 = CloseHandle(stream->fd);
+
+	free(stream);
+
+	if (ret2 == FALSE)
+		return SO_EOF;
+
+	return 0;
+}
+
+
+
+
+HANDLE so_fileno(SO_FILE *stream)
+{
+	return stream->fd;
+}
