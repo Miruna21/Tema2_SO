@@ -44,10 +44,10 @@ struct _so_file {
 HANDLE fd;
 unsigned char read_buffer[BUFFER_SIZE];
 unsigned char write_buffer[BUFFER_SIZE];
-int crt_read_buf_size;
-int crt_write_buf_size;
-int write_offset; // start index for write
-int read_offset; // start index for read
+DWORD crt_read_buf_size;
+DWORD crt_write_buf_size;
+DWORD write_offset; // start index for write
+DWORD read_offset; // start index for read
 int found_error;
 int end_of_file;
 int last_op; // -1 no operations, 0 read, 1 write

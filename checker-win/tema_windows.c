@@ -360,3 +360,121 @@ int so_ferror(SO_FILE *stream)
 	/* intoarce 1 daca a avut loc o eroare pe parcurs in urma apelurile de sistem */
 	return stream->found_error;
 }
+
+static VOID RedirectHandle(STARTUPINFO *psi, HANDLE hFile, INT opt)
+{
+	if (hFile == INVALID_HANDLE_VALUE)
+		return;
+
+	ZeroMemory(psi, sizeof(*psi));
+	psi->cb = sizeof(*psi);
+
+	psi->hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+	psi->hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+	psi->hStdError = GetStdHandle(STD_ERROR_HANDLE);
+
+	psi->dwFlags |= STARTF_USESTDHANDLES;
+
+	switch (opt) {
+	case STD_INPUT_HANDLE:
+		psi->hStdInput = hFile;
+		break;
+	case STD_OUTPUT_HANDLE:
+		psi->hStdOutput = hFile;
+		break;
+	default:
+		break;
+	}
+}
+
+SO_FILE *so_popen(const char *command, const char *type)
+{
+	HANDLE fd_read, fd_write;
+	BOOL ret;
+	SECURITY_ATTRIBUTES sa;
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	SO_FILE *so_file;
+	const char *aux = "cmd /C ";
+	char *final_command = malloc(50 * sizeof(char));
+
+	strcpy(final_command, aux);
+	strcat(final_command, command);
+
+	ZeroMemory(&sa, sizeof(sa));
+	sa.bInheritHandle = TRUE;
+	ZeroMemory(&si, sizeof(si));
+	ZeroMemory(&pi, sizeof(pi));
+
+	/* se creeaza pipe-ul necesar comunicarii dintre procesul parinte si procesul copil */
+	ret = CreatePipe(&fd_read, &fd_write, &sa, 0);
+	if (ret == NULL)
+		return NULL;
+
+
+	/* pentru procesul copil */
+	if (strcmp(type, "r") == 0) {
+		/* se redirecteaza STDOUT-ul copilului in capatul fd_write al pipe-ului */
+		RedirectHandle(&si, fd_write, STD_OUTPUT_HANDLE);
+		/* setez nemostenbil fd_read */
+		SetHandleInformation(fd_read, HANDLE_FLAG_INHERIT, 0);
+	} else if (strcmp(type, "w") == 0) {
+		/* se redirecteaza STDIN-ul copilului in capatul fd_read al pipe-ului */
+		RedirectHandle(&si, fd_read, STD_INPUT_HANDLE);
+		/* setez nemostenbil fd_write */
+		SetHandleInformation(fd_write, HANDLE_FLAG_INHERIT, 0);
+	}
+
+	/* se creeaza procesul copil */
+	ret = CreateProcess(
+		NULL,
+		final_command,
+		NULL,
+		NULL,
+		TRUE,
+		0,
+		NULL,
+		NULL,
+		&si,
+		&pi);
+
+	free(final_command);
+
+	if (ret == FALSE)
+		return NULL;
+	
+	so_file = (SO_FILE *)malloc(sizeof(SO_FILE));
+
+	if (so_file == NULL)
+		return NULL;
+
+
+	if (strcmp(type, "r") == 0) {
+		/* se inchide STDOUT */
+		CloseHandle(fd_write);
+		/* se salveaza capatul pipe-ului cu care comunica parintele cu copilul */
+		so_file->fd = fd_read;
+	} else if (strcmp(type, "w") == 0) {
+		/* se inchide STDIN */
+		CloseHandle(fd_read);
+		/* se salveaza capatul pipe-ului cu care comunica parintele cu copilul */
+		so_file->fd = fd_write;
+	} else
+		return NULL;
+
+	so_file->crt_read_buf_size = 0;
+	so_file->crt_write_buf_size = 0;
+	so_file->write_offset = 0;
+	so_file->read_offset = 0;
+	so_file->found_error = 0;
+	so_file->end_of_file = 0;
+	so_file->last_op = -1;
+	so_file->cursor = 0;
+	so_file->end_of_file_pos = -2;
+	so_file->child_process = 1;
+	so_file->hProcess = pi.hProcess;
+	so_file->hThread = pi.hThread;
+	so_file->append_mode = 0;
+
+	return so_file;
+}
