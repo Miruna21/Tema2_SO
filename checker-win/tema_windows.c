@@ -117,7 +117,72 @@ int so_fclose(SO_FILE *stream)
 	return 0;
 }
 
+int syscall_read(SO_FILE *stream)
+{
+	DWORD bytes_read = 0;
+	DWORD count = BUFFER_SIZE;
+	DWORD crt_bytes_read;
+	BOOL ret;
 
+	/* daca s-a ajuns la sfarsitul fisierului, nu mai apelez read */
+	if (stream->end_of_file == 1)
+		return 0;
+
+	/* se citesc mai multi bytes in avans din fisier pana se umple buffer-ul intern sau s-a ajuns la sfarsitul fisierului */
+	ret = ReadFile(stream->fd, stream->read_buffer + bytes_read, count - bytes_read, &crt_bytes_read, NULL);
+
+	if (ret == FALSE || (ret == FALSE && stream->child_process == 1 && GetLastError() == ERROR_BROKEN_PIPE)) {
+		/* eroare */
+		stream->found_error = 1;
+		return SO_EOF;
+	}
+
+	if (crt_bytes_read == 0) {
+		/* sfarsitul fisierului */
+		stream->end_of_file = 1;
+		stream->end_of_file_pos = stream->cursor + crt_bytes_read;
+		bytes_read += crt_bytes_read;
+		stream->crt_read_buf_size = bytes_read;
+		return SO_EOF;
+	}
+
+	bytes_read += crt_bytes_read;
+	stream->crt_read_buf_size = bytes_read;
+
+	stream->read_offset = 0;
+
+	return 0;
+}
+
+
+int so_fgetc(SO_FILE *stream)
+{
+	int pos;
+	int character;
+	int ret;
+
+	stream->last_op = 0;
+
+	if (so_feof(stream) == 1)
+		return SO_EOF;
+
+	/* daca buffer-ul intern de read este gol sau am citit tot ce se afla in buffer, se incearca umplerea buffer-ului */
+	if (stream->crt_read_buf_size == 0 || stream->read_offset == stream->crt_read_buf_size) {
+		ret = syscall_read(stream);
+
+		if (ret == SO_EOF)
+			return SO_EOF;
+	}
+
+	/* se preia un caracter din buffer */
+	pos = stream->read_offset;
+	character = (int)stream->read_buffer[pos];
+
+	stream->read_offset += 1;
+	stream->cursor += 1;
+
+	return character;
+}
 
 
 HANDLE so_fileno(SO_FILE *stream)
