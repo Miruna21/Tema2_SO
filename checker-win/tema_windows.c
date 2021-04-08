@@ -155,6 +155,41 @@ int syscall_read(SO_FILE *stream)
 }
 
 
+int syscall_write(SO_FILE *stream)
+{
+	DWORD bytes_written = stream->write_offset;
+	DWORD count = stream->crt_write_buf_size;
+	DWORD crt_bytes_written;
+	BOOL ret;
+	DWORD pos;
+
+	if (stream->append_mode == 1) {
+		pos = SetFilePointer(stream->fd, 0l, NULL, FILE_END);
+
+		if (pos == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
+			return SO_EOF;
+	}
+
+	/* se scriu datele din buffer in fisier pana cand totul a fost scris cu succes */
+	while (bytes_written < count) {
+		ret = WriteFile(stream->fd, stream->write_buffer + bytes_written, count - bytes_written, &crt_bytes_written, NULL);
+
+		if (ret == FALSE) {
+			stream->found_error = 1;
+			return SO_EOF;
+		}
+
+		bytes_written += crt_bytes_written;
+		stream->write_offset = bytes_written;
+	}
+	/* se reseteaza dimensiunea buffer-ului la 0 */
+	stream->crt_write_buf_size = 0;
+	stream->write_offset = 0;
+
+	return 0;
+}
+
+
 int so_fgetc(SO_FILE *stream)
 {
 	int pos;
@@ -182,6 +217,29 @@ int so_fgetc(SO_FILE *stream)
 	stream->cursor += 1;
 
 	return character;
+}
+
+
+int so_fputc(int c, SO_FILE *stream)
+{
+	int ret = c;
+	int crt_pos = stream->crt_write_buf_size;
+
+	stream->last_op = 1;
+
+	/* se scrie un caracter in buffer */
+	stream->write_buffer[crt_pos] = (unsigned char)c;
+	stream->crt_write_buf_size += 1;
+	stream->cursor += 1;
+
+	/* daca buffer-ul de write este plin, se vor scrie datele in fisier */
+	if (stream->crt_write_buf_size == BUFFER_SIZE)
+		ret = syscall_write(stream);
+
+	if (ret == 0 || ret == c)
+		return c;
+
+	return ret;
 }
 
 
