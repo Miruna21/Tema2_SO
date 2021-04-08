@@ -22,7 +22,15 @@
 #error "Unknown platform"
 #endif
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <windows.h>
 
 #define SEEK_SET	0	/* Seek from beginning of file.  */
 #define SEEK_CUR	1	/* Seek from current position.  */
@@ -45,7 +53,10 @@ int end_of_file;
 int last_op; // -1 no operations, 0 read, 1 write
 int cursor;
 int end_of_file_pos;
-int child_pid;
+int child_process;
+HANDLE hProcess;
+HANDLE hThread;
+int append_mode;
 };
 
 typedef struct _so_file SO_FILE;
