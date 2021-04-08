@@ -296,6 +296,11 @@ size_t so_fwrite(const void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 }
 
 
+HANDLE so_fileno(SO_FILE *stream)
+{
+	return stream->fd;
+}
+
 int so_fflush(SO_FILE *stream)
 {
 	int ret;
@@ -311,7 +316,47 @@ int so_fflush(SO_FILE *stream)
 	return 0;
 }
 
-HANDLE so_fileno(SO_FILE *stream)
+
+int so_fseek(SO_FILE *stream, long offset, int whence)
 {
-	return stream->fd;
+	DWORD pos;
+	int ret;
+
+	if (stream->last_op == 0) {
+		/* operatie de citire -> read buffer invalid */
+		stream->crt_read_buf_size = 0;
+	} else if (stream->last_op == 1) {
+		/* operatie de scriere -> e nevoie de fflush */
+		ret = so_fflush(stream);
+
+		if (ret == SO_EOF)
+			return SO_EOF;
+	}
+
+	/* se schimba pozitia cursorului */
+	pos = SetFilePointer(stream->fd, offset, NULL, whence);
+
+	if (pos == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR) {
+		stream->found_error = 1;
+		return SO_EOF;
+	}
+	stream->cursor = pos;
+
+	return 0;
+}
+
+long so_ftell(SO_FILE *stream)
+{
+	return stream->cursor;
+}
+
+int so_feof(SO_FILE *stream)
+{
+	return (stream->end_of_file == 1);
+}
+
+int so_ferror(SO_FILE *stream)
+{
+	/* intoarce 1 daca a avut loc o eroare pe parcurs in urma apelurile de sistem */
+	return stream->found_error;
 }
